@@ -13,7 +13,7 @@ class TokenGenerator implements TokenGeneratorInterface
         $this->secretKey = $secretKey;
     }
 
-    public function generateToken(array | object $payload)
+    public function generateToken(array | object $payload): string
     {
         $token = JWT::encode($payload, $this->secretKey, "HS256");
         return $token;
