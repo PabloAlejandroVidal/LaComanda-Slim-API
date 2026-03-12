@@ -1,5 +1,5 @@
 <?php
-namespace App\DTO;
+namespace App\DTO\Request;
 
 use ValidatableRequest;
 use Respect\Validation\Validator as v;

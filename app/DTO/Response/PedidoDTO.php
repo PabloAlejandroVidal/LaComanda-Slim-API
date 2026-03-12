@@ -1,5 +1,5 @@
 <?php
-namespace App\DTO;
+namespace App\DTO\Response;
 class PedidoDTO
 {
     public function __construct(

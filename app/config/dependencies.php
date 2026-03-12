@@ -1,6 +1,8 @@
 <?php
 
+use App\Contracts\TransactionManager;
 use App\Databases\DatabaseManager;
+use App\Infrastructure\PdoTransactionManager;
 use App\Interfaces\TokenGeneratorInterface;
 use App\Interfaces\TokenVerifierInterface;
 use App\Services\TokenGenerator;
@@ -11,12 +13,10 @@ use App\Middlewares\TokenMiddleware;
 $clave = 'claveSecreta';
 
 $container->set(TokenVerifierInterface::class, fn() => new TokenVerifier($clave));
-$container->set(TokenGeneratorInterface::class, fn() => new TokenGenerator($clave));
 $container->set(Utils::class, fn() => new Utils());
 
-
 // Configurar el generador de tokens
-$container->set(TokenGenerator::class, value: fn() => new TokenGenerator($clave));
+$container->set(TokenGeneratorInterface::class, fn() => new TokenGenerator($clave));
 
 // Configurar el verificador de tokens
 $container->set(TokenVerifier::class, value: fn() => new TokenVerifier($clave));
@@ -34,4 +34,10 @@ $container->set(TokenMiddleware::class, function ($container): callable {
             $roles
         );
     };
+});
+
+$container->set(TransactionManager::class, function ($c) {
+    return new PdoTransactionManager(
+        $c->get(PDO::class)
+    );
 });

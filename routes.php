@@ -1,7 +1,6 @@
 <?php
 use App\Controllers\AccessController;
 use App\Controllers\EmpleadoController;
-use App\Controllers\HomeController;
 use App\Controllers\InformeController;
 use App\Controllers\MesaController;
 use App\Controllers\PedidoController;
@@ -12,8 +11,8 @@ use App\Enums\EmpleadoType;
 $tokenMiddleware = $container->get(TokenMiddleware::class);
 
 // Public
+$app->get('/access', [AccessController::class, 'access']);
 $app->post('/login', [AccessController::class, 'login']);
-$app->get('/prueba', [HomeController::class, 'getData']);
 
 // Empleados
 $app->get('/empleados', [EmpleadoController::class, 'listarEmpleados'])->add($tokenMiddleware([EmpleadoType::SOCIO]));

@@ -30,7 +30,7 @@ class JsonApiResponseHelper
     }
 
 
-    public static function respondWithCreated(Response $res, array|object $data, string $location = null): Response
+    public static function respondWithCreated(Response $res, array|object $data, string $location): Response
     {
         $payload = ['data' => $data];
 
@@ -48,7 +48,7 @@ class JsonApiResponseHelper
         return self::respondWithData($res, $data, ['pagination' => $paginationMeta]);
     }
 
-    public static function respondWithError(Response $res, int $statusCode, string $title, string $detail = null, string $code = null): Response
+    public static function respondWithError(Response $res, int $statusCode, string $title, string $detail, string $code): Response
     {
         $error = [
             'status' => (string)$statusCode,
@@ -73,11 +73,7 @@ class JsonApiResponseHelper
             ->withStatus($statusCode)
             ->withHeader('Content-Type', 'application/vnd.api+json');
     }
-    public static function respondWithResource(
-        Response $res,
-        string $type,
-        array $resource,
-        int $statusCode = 200
+    public static function respondWithResource(Response $res, string $type, array $resource, int $statusCode = 200
     ): Response {
         $payload = [
             'data' => [
@@ -90,12 +86,7 @@ class JsonApiResponseHelper
         return self::respond($res, $payload, $statusCode);
     }
 
-    public static function respondWithCreatedResource(
-        Response $res,
-        string $type,
-        array $resource,
-        string $location = null
-    ): Response {
+    public static function respondWithCreatedResource(Response $res, string $type, array $resource, string $location): Response {
         $response = self::respondWithResource($res, $type, $resource, 201);
 
         if ($location) {

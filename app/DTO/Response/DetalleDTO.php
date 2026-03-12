@@ -1,14 +1,12 @@
 <?php
-namespace App\DTO;
+namespace App\DTO\Response;
 
-class DetalleDTO
+final class DetalleDTO
 {
     public function __construct(
-        public int $id,
-        public string $nombreProducto,
+        public int $productoId,
+        public string $productoNombre,
         public int $cantidad,
         public string $estado,
     ) {}
 }
-
-?>

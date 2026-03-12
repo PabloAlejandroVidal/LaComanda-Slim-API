@@ -1,5 +1,5 @@
 <?php
-namespace App\DTO;
+namespace App\DTO\Request;
 use ValidatableRequest;
 use Respect\Validation\{
     Validator as v,
@@ -16,9 +16,9 @@ class MesaRequest implements ValidatableRequest {
     }
 
     public static function validate(array $data): void{
-        $validador = v::key('id', v::length(5, 5)->setTemplate('El ID debe ser de exactamente 5 caracteres'))
-                ->setTemplate('Campo {{name}} requerido');
-                $validador->assert($data);
+        v::key('id', v::length(5, 5)->setTemplate('El ID debe ser de exactamente 5 caracteres'))
+        ->setTemplate('Campo {{name}} requerido')
+        ->assert($data);
     } 
 }
 ?>
