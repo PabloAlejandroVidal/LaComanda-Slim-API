@@ -1,12 +1,13 @@
 <?php
 use App\Controllers\AccessController;
 use App\Controllers\EmpleadoController;
+use App\Controllers\EmpleadoQueryController;
 use App\Controllers\InformeController;
 use App\Controllers\MesaController;
 use App\Controllers\PedidoController;
 use App\Controllers\ProductoController;
+use App\Domain\Empleado\EmpleadoType;
 use App\Middlewares\TokenMiddleware;
-use App\Enums\EmpleadoType;
 
 $tokenMiddleware = $container->get(TokenMiddleware::class);
 
@@ -72,3 +73,10 @@ $app->get('/informes/mesas/menor-importe', [InformeController::class, 'getMesaMe
 $app->get('/informes/mesas/facturacion', [InformeController::class, 'getMesaFacturacionEntre'])->add($tokenMiddleware([EmpleadoType::SOCIO]));
 $app->get('/informes/mesas/comentarios/mejores', [InformeController::class, 'getMesaMejoresComentarios'])->add($tokenMiddleware([EmpleadoType::SOCIO]));
 $app->get('/informes/mesas/comentarios/peores', [InformeController::class, 'getMesaPeoresComentarios'])->add($tokenMiddleware([EmpleadoType::SOCIO]));
+
+
+// 12/03/2026
+$app->get(
+    '/empleados/estadisticas',
+    [EmpleadoQueryController::class, 'estadisticas']
+)->add($tokenMiddleware([EmpleadoType::SOCIO]));
