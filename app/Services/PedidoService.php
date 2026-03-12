@@ -1,110 +1,172 @@
 <?php
+
 namespace App\Services;
 
-use App\Repositories\EmpleadoRepository;
+use App\Contracts\TransactionManager;
+use App\Domain\Mesa\EstadoMesa;
+use App\DTO\Request\PedidoRequest;
+use App\Entities\TokenPayload;
+use App\Exceptions\BusinessRuleException;
+use App\Exceptions\NotFoundException;
 use App\Repositories\PedidoRepository;
 use App\Repositories\DetallePedidoRepository;
 use App\Repositories\MesaRepository;
-use App\Repositories\PermisoRepository;
-use App\Services\AuthorizationService;
+use App\Repositories\EmpleadoRepository;
 use App\Services\Utils;
-use App\DTO\DetalleDTO;
+use PDO;
 
-class EstadoMesa {
-    const CERRADA = 1;
-    const ESPERANDO_PEDIDO = 2;
-    const COMIENDO = 3;
-    const PAGANDO = 4;
-}
 
-class PedidoService
+final class PedidoService
 {
     public function __construct(
         private PedidoRepository        $pedidoRepo,
         private DetallePedidoRepository $detalleRepo,
         private MesaRepository          $mesaRepo,
-        private AuthorizationService    $authorizationService,
-        private PermisoRepository       $permisoService,
         private EmpleadoRepository      $empleadoRepo,
+        private PDO $pdo,
+        private TransactionManager $tx
     ) {}
 
-    public function crearPedido(
-        int    $mesaId,
-        string    $mozoEmail,
-        string $nombreCliente,
-        array  $detalles
-    ): string {
-
-        $empleado = $this->empleadoRepo->getEmpleadoByEmail($mozoEmail);
+    // ===============================
+    // CREAR PEDIDO
+    // ===============================
+    public function crearPedido(PedidoRequest $pedidoRequest, TokenPayload $token): array
+    {
+        $empleado = $this->empleadoRepo->getEmpleadoByEmail($token->email);
         if (!$empleado) {
-            throw new \DomainException("Empleado no encontrado");
+            throw new NotFoundException("Empleado no encontrado");
         }
 
-        if (!$this->mesaRepo->exists($mesaId)) {
-            throw new \DomainException("Mesa inexistente");
+        $mesa = $this->mesaRepo->getMesa($pedidoRequest->mesa);
+        if (!$mesa) {
+            throw new NotFoundException("Mesa no encontrada");
         }
 
-        $mesa = $this->mesaRepo->getMesa($mesaId);        
-        if ($mesa['estado_id'] !== EstadoMesa::CERRADA) {
-            throw new \DomainException("La mesa $mesaId no está disponible: {$mesa['descripcion']}");
+        if ($mesa['estado'] !== EstadoMesa::CERRADA) {
+            throw new BusinessRuleException("La mesa no está disponible");
         }
 
-        $pedidoId = Utils::generarCodigoAlfanumerico(5);
+        return $this->tx->transactional(function () use ($pedidoRequest, $empleado) {
+
+            $codigo = Utils::generarCodigoAlfanumerico(5);
+            $hora   = Utils::getHoraActual();
+
+            $pedidoId = $this->pedidoRepo->crearPedido(
+                $codigo,
+                (int)$empleado->id,
+                $pedidoRequest->mesa,
+                $pedidoRequest->nombre,
+                $hora
+            );
+
+            $this->mesaRepo->setEstado(
+                $pedidoRequest->mesa,
+                EstadoMesa::ESPERANDO_PEDIDO
+            );
+
+            if (!empty($pedidoRequest->detalles)) {
+                $this->detalleRepo->insertarDetalles(
+                    $pedidoId,
+                    $pedidoRequest->detalles
+                );
+            }
+
+            return [
+                'id'   => $pedidoId,
+                'mesa' => $pedidoRequest->mesa
+            ];
+        });
+    }
+
+    // ===============================
+    // ASIGNAR PEDIDO A EMPLEADO
+    // ===============================
+    public function asignar(string $pedidoId, int $empleadoId): void
+    {
+        $empleado = $this->empleadoRepo->getEmpleadoById($empleadoId);
+        if (!$empleado) {
+            throw new NotFoundException("Empleado no encontrado");
+        }
+
+        $sectores = $this->empleadoRepo->getSectoresByEmpleado($empleadoId);
+        if (empty($sectores)) {
+            throw new BusinessRuleException("El empleado no tiene sectores asignados");
+        }
+
+        // Para el TP usamos el primero
+        $sectorId = (int)$sectores[0]['id'];
+
         $hora = Utils::getHoraActual();
- 
-        $this->pedidoRepo->crearPedido($pedidoId, $empleado['id'],$mesaId, $nombreCliente, $hora);
-        $this->mesaRepo->setEstado($mesaId, EstadoMesa::ESPERANDO_PEDIDO);
-        $this->agregarDetalles($mesaId, $pedidoId, $detalles);
-        return $pedidoId;
+
+        $this->detalleRepo->declararPedidoDetallesAsignadoPorSector(
+            $pedidoId,
+            $empleadoId,
+            $hora,
+            $sectorId
+        );
     }
 
-    public function procesarPedido($pedidoId, $mesaId, $empleadoId, $sector, $accion) {
-        switch($accion){
-            case 'asignar':
-                $this->asignarLote($pedidoId, $mesaId, $empleadoId, $sector);
-                break;
-            case 'preparar':
-                $this->prepararLote($pedidoId, $mesaId, $empleadoId, $sector);
-                break;
-            case 'entregar':
-                $this->entregarLote($pedidoId, $mesaId, $empleadoId, $sector);
-                break;
+    // ===============================
+    // INICIAR PREPARACION
+    // ===============================
+    public function iniciarPreparacion(string $pedidoId, int $empleadoId): void
+    {
+        $sectores = $this->empleadoRepo->getSectoresByEmpleado($empleadoId);
+        if (empty($sectores)) {
+            throw new BusinessRuleException("El empleado no tiene sectores asignados");
         }
-    }
 
-    public function agregarDetalles(string $mesaId, int $pedidoId, array $detalles) {
-        $mesa = $this->mesaRepo->getMesa($mesaId);
-        if (in_array($mesa['estado_id'], [EstadoMesa::CERRADA])) {
-            throw new \DomainException(message: "No se puede agregar más pedidos: {$mesa['descripcion']}");
-        }
-        $this->mesaRepo->setEstado($mesaId, EstadoMesa::ESPERANDO_PEDIDO);
-        return $this->detalleRepo->insertarDetalles($pedidoId, $detalles);
-    }
-
-    public function asignarLote(int $pedidoId, string $mesaId, int $empleadoId, int $sectorId): void {
-        $mesa = $this->mesaRepo->getMesa($mesaId);
-        if (in_array($mesa['estado_id'], [EstadoMesa::CERRADA])) {
-            throw new \DomainException(message: "No se pueden asignar pedidos: {$mesa['descripcion']}");
-        }
+        $sectorId = (int)$sectores[0]['id'];
         $hora = Utils::getHoraActual();
-        $this->detalleRepo->declararPedidoDetallesAsignadoPorSector($pedidoId, $empleadoId, $hora, $sectorId);
+
+        $this->detalleRepo->declararPedidoPreparadoPorSector(
+            $pedidoId,
+            $empleadoId,
+            $hora,
+            $sectorId
+        );
     }
 
-    public function prepararLote(int $pedidoId, string $mesaId, int $empleadoId, int $sectorId): void {
-        $mesa = $this->mesaRepo->getMesa($mesaId);
-        if (in_array($mesa['estado_id'], [EstadoMesa::CERRADA])) {
-            throw new \DomainException(message: "No se pueden preparar pedidos: {$mesa['descripcion']}");
+    // ===============================
+    // MARCAR LISTO
+    // ===============================
+    public function marcarListo(string $pedidoId, int $empleadoId): void
+    {
+        $sectores = $this->empleadoRepo->getSectoresByEmpleado($empleadoId);
+        if (empty($sectores)) {
+            throw new BusinessRuleException("El empleado no tiene sectores asignados");
         }
+
+        $sectorId = (int)$sectores[0]['id'];
         $hora = Utils::getHoraActual();
-        $this->detalleRepo->declararPedidoPreparadoPorSector($pedidoId, $empleadoId, $hora, $sectorId);
+
+        $this->detalleRepo->declararPedidoPreparadoPorSector(
+            $pedidoId,
+            $empleadoId,
+            $hora,
+            $sectorId
+        );
     }
-    public function entregarLote(int $pedidoId, string $mesaId, int $empleadoId, int $sectorId): void {
-        $mesa = $this->mesaRepo->getMesa($mesaId);
-        if (in_array($mesa['estado_id'], [EstadoMesa::CERRADA])) {
-            throw new \DomainException(message: "No se pueden entregar pedidos: {$mesa['descripcion']}");
+
+    // ===============================
+    // ENTREGAR PEDIDO
+    // ===============================
+    public function entregar(string $pedidoId, int $empleadoId): void
+    {
+        $sectores = $this->empleadoRepo->getSectoresByEmpleado($empleadoId);
+        if (empty($sectores)) {
+            throw new BusinessRuleException("El empleado no tiene sectores asignados");
         }
+
+        $sectorId = (int)$sectores[0]['id'];
         $hora = Utils::getHoraActual();
-        $this->detalleRepo->declararPedidoEntregadoPorSector($pedidoId, $empleadoId, $hora, $sectorId);
+
+        $this->detalleRepo->declararPedidoEntregadoPorSector(
+            $pedidoId,
+            $empleadoId,
+            $hora,
+            $sectorId
+        );
 
         if ($this->detalleRepo->todosEntregados($pedidoId)) {
             $mesaId = $this->pedidoRepo->getMesaId($pedidoId);
@@ -112,44 +174,36 @@ class PedidoService
         }
     }
 
-    public function solicitarCuenta(int $pedidoId): void {
-        $mesaId = $this->pedidoRepo->getMesaId($pedidoId);
-        $this->mesaRepo->setEstado($mesaId, EstadoMesa::PAGANDO);
-    }
+    // ===============================
+    // CERRAR PEDIDO
+    // ===============================
+    public function cerrar(string $pedidoId, int $empleadoId): void
+    {
+        $this->tx->transactional(function () use ($pedidoId, $empleadoId) {
 
-    public function cerrarComanda(int $pedidoId, int $empleadoId): void {
-        $hora = Utils::getHoraActual();
-        $importe = $this->pedidoRepo->getMonto($pedidoId);
-        $this->pedidoRepo->cerrarPedido($pedidoId, $empleadoId,$hora, $importe);
-
-        $mesaId = $this->pedidoRepo->getMesaId($pedidoId);
-        $this->mesaRepo->setEstado($mesaId, EstadoMesa::CERRADA);
-    }
-
-    public function validarDetalles($pedidos): bool {
-        if (!is_array($pedidos)) {
-            return false;
-        }
-
-        foreach ($pedidos as $pedido) {
-            if (!(isset($pedido['id'], $pedido['cantidad']))) {
-                return false;
+            if (!$this->detalleRepo->todosEntregados($pedidoId)) {
+                throw new BusinessRuleException(
+                    "No se puede cerrar un pedido con productos pendientes"
+                );
             }
-        }
 
-        return true;
-    }
+            $importe = $this->pedidoRepo->getMonto($pedidoId);
+            $hora    = Utils::getHoraActual();
 
-    public function transformDetallesToDTO($detallesPedidos): array {
-        $detallesDTO = [];
-        foreach ($detallesPedidos as $detalle) {
-            $detallesDTO[] = new DetalleDTO(
-                $detalle->id,
-                $detalle->producto->nombre,
-                $detalle->cantidad,
-                $detalle->estado
+            $this->pedidoRepo->cerrarPedido(
+                $pedidoId,
+                $empleadoId,
+                $hora,
+                $importe
             );
-        }
-        return $detallesDTO;
+
+            $mesaId = $this->pedidoRepo->getMesaId($pedidoId);
+
+            $this->mesaRepo->setEstado(
+                $mesaId,
+                EstadoMesa::CERRADA
+            );
+        });
     }
+
 }

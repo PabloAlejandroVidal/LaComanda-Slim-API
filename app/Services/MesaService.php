@@ -1,67 +1,94 @@
 <?php
 namespace App\Services;
 
-use App\DTO\EmpleadoInput;
-use App\DTO\EmpleadoRequest;
-use App\DTO\MesaDTO;
-use App\DTO\MesaRequest;
-use App\Enums\EmpleadoType;
 use App\Exceptions\ConflictException;
-use App\Exceptions\EmpleadoNoCreadoException;
-use App\Repositories\EmpleadoRepository;
-use App\Repositories\PedidoRepository;
-use App\Repositories\DetallePedidoRepository;
+use App\Exceptions\NotFoundException;
 use App\Repositories\MesaRepository;
-use App\Repositories\PermisoRepository;
-use App\Repositories\TipoEmpleadoRepository;
-use App\Services\AuthorizationService;
-use App\Services\Utils;
-use App\DTO\DetalleDTO;
-use ArrayAccess;
+use App\DTO\Request\MesaRequest;
+use App\DTO\Response\MesaDTO;
+use App\Domain\Mesa\EstadoMesa;
 
-
-class MesaService
+final class MesaService
 {
     public function __construct(
-        private PedidoRepository        $pedidoRepo,
-        private DetallePedidoRepository $detalleRepo,
-        private MesaRepository          $mesaRepo,
-        private PermisoRepository       $permisoService,
-        private EmpleadoRepository      $empleadoRepo,
-        private TipoEmpleadoRepository  $tipoEmpleadoRepository,
+        private MesaRepository $mesaRepo
     ) {}
 
-    public function crearMesa(MesaRequest $mesaRequest): array {
+    /*-------------------------------------------------
+    | Crear mesa
+    -------------------------------------------------*/
+    public function crearMesa(MesaRequest $mesaRequest): array
+    {
         if ($this->mesaRepo->exists($mesaRequest->id)) {
-            throw new ConflictException("El id ya está en uso, no se puede crear la mesa"); //209
+            throw new ConflictException("El id ya está en uso, no se puede crear la mesa");
         }
+
         $mesaId = $this->mesaRepo->add($mesaRequest->id);
-        
+
         return [
-            'id' => $mesaId,
-            'estado' => 'libre'
+            'id'     => $mesaId,
+            'estado' => EstadoMesa::CERRADA->value
         ];
     }
 
-    public function getMesas(): array {
+    /*-------------------------------------------------
+    | Listar mesas agrupadas por estado
+    -------------------------------------------------*/
+    public function getMesas(): array
+    {
         $mesas = $this->mesaRepo->getMesas();
-        $mesasLibres = [];
+
+        $mesasLibres   = [];
         $mesasOcupadas = [];
 
-        foreach($mesas as $mesa){
-            if($mesa['estado'] === "Cerrada"){
-                $mesasLibres[] = new MesaDTO($mesa['id'], true);
-            }else{
-                $mesasOcupadas[] = new MesaDTO($mesa['id'], false);
+        foreach ($mesas as $mesa) {
+
+            // ✅ Ahora correctamente comparando enum
+            $esLibre = $mesa['estado'] === EstadoMesa::CERRADA;
+
+            $dto = new MesaDTO(
+                id: $mesa['id'],
+                libre: $esLibre
+            );
+
+            if ($esLibre) {
+                $mesasLibres[] = $dto;
+            } else {
+                $mesasOcupadas[] = $dto;
             }
         }
+
         $output = [];
-        if (count($mesasLibres)){
-            $output[] = ["Detalle" => "Mesas Libres", "Mesas" => $mesasLibres];
+
+        if (!empty($mesasLibres)) {
+            $output[] = [
+                "detalle" => "Mesas Libres",
+                "mesas"   => $mesasLibres
+            ];
         }
-        if (count($mesasOcupadas)){
-            $output[] = ["Detalle" => "Mesas Ocupadas", "Mesas" => $mesasOcupadas];
+
+        if (!empty($mesasOcupadas)) {
+            $output[] = [
+                "detalle" => "Mesas Ocupadas",
+                "mesas"   => $mesasOcupadas
+            ];
         }
+
         return $output;
+    }
+
+    /*-------------------------------------------------
+    | Cambiar estado manualmente
+    | (por ejemplo: mozo o socio)
+    -------------------------------------------------*/
+    public function cambiarEstado(string $mesaId, EstadoMesa $nuevoEstado): void
+    {
+        $mesa = $this->mesaRepo->getMesa($mesaId);
+
+        if (!$mesa) {
+            throw new NotFoundException("Mesa {$mesaId} no encontrada");
+        }
+
+        $this->mesaRepo->setEstado($mesaId, $nuevoEstado);
     }
 }
