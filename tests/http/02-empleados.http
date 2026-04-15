@@ -1,0 +1,26 @@
+@base = http://localhost/Programacion3/trabajoPractico-Final
+@token_socio = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxMjE5OTQsImV4cCI6MTc3NjEyNTU5NCwiZGF0YSI6eyJpZCI6NSwibm9tYnJlIjoiU29jaW8xIiwiZW1haWwiOiJzb2NpbzFAZ21haWwuY29tIiwicm9sIjoic29jaW8ifX0.fqJpP38BLCYD1YzXaSEbHyVjNmzO8gP6bTnELyLUWuU
+
+@token_mozo = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzU2MTA5OTMsImV4cCI6MTc3NTYxNDU5MywiZGF0YSI6eyJpZCI6NCwibm9tYnJlIjoiTW96bzEiLCJlbWFpbCI6Im1vem8xQGdtYWlsLmNvbSIsInJvbCI6Im1vem8ifX0.ZWXRo9HTJsVkjbWZMKbC0cXWZw4QZQ0iqkg8j6Wqjfw
+@from = 2026-01-01
+@to = 2026-12-31
+
+### ==============================
+### EMPLEADOS - LISTAR
+### ==============================
+GET {{base}}/empleados
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - ALTA
+### ==============================
+POST {{base}}/empleados
+Authorization: Bearer {{token_socio}}
+Content-Type: application/json
+
+{
+  "nombre": "Empleado Prueba",
+  "email": "empleado.prueba@gmail.com",
+  "clave": "1234",
+  "tipo": "mozo"
+}

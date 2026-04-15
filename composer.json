@@ -20,8 +20,8 @@
         "league/csv": "^9.9",
         "tecnickcom/tcpdf": "^6.6",
         "php-di/php-di": "^7.0",
-        "illuminate/database": "^10.16",
         "respect/validation": "^2.2",
-        "vlucas/phpdotenv": "^5.6"
+        "vlucas/phpdotenv": "^5.6",
+        "dompdf/dompdf": "^3.1"
     }
 }

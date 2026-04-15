@@ -1,0 +1,61 @@
+@base_url = http://localhost/Programacion3/trabajoPractico-Final
+
+@token_socio = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxMjcyOTksImV4cCI6MTc3NjEzMDg5OSwiZGF0YSI6eyJpZCI6NSwibm9tYnJlIjoiU29jaW8xIiwiZW1haWwiOiJzb2NpbzFAZ21haWwuY29tIiwicm9sIjoic29jaW8ifX0.4yn72t0uADKyerkhgvI-31vgm-sx7mlgP5vdsLEGU_4
+
+@from = 2026-01-01 00:00:00
+@to = 2026-12-31 23:59:59
+
+
+### ==============================
+### EMPLEADOS - INGRESOS 
+### ==============================
+GET {{base_url}}/empleados/ingresos?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - ESTADÍSTICAS
+### ==============================
+GET {{base_url}}/empleados/estadisticas?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - OPERACIONES TOTAL POR SECTOR
+### ==============================
+GET {{base_url}}/empleados/operaciones/sector?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - OPERACIONES POR SECTOR Y EMPLEADO
+### ==============================
+GET {{base_url}}/empleados/operaciones/sector-empleado?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - OPERACIONES POR EMPLEADO
+### ==============================
+GET {{base_url}}/empleados/operaciones?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - PRODUCCIÓN POR EMPLEADO
+### ==============================
+GET {{base_url}}/empleados/produccion?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - PRODUCCIÓN POR SECTOR
+### ==============================
+GET {{base_url}}/empleados/produccion/sector?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - PRODUCCIÓN POR SECTOR Y EMPLEADO
+### ==============================
+GET {{base_url}}/empleados/produccion/sector-empleado?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### EMPLEADOS - PRODUCCIÓN DETALLADA POR PRODUCTO
+### ==============================
+GET {{base_url}}/empleados/produccion/detallada?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}

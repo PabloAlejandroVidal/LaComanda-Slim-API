@@ -1,36 +1,74 @@
 <?php
+
 namespace App\Controllers;
 
-use App\DTO\EmpleadoRequest;
-use App\Http\JsonApiResponseHelper;
-use App\Repositories\EmpleadoRepository;
-use App\DTO\EmpleadoDTO;
+use App\DTO\Request\EmpleadoRequest;
 use App\Services\EmpleadoService;
-use App\Utils\EmpleadoMapper;
-use App\Validation\ValidationHelper;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use Respect\Validation\Validator as v;
-use Respect\Validation\Exceptions\NestedValidationException;
 
-class EmpleadoController extends Controller
+class EmpleadoController extends BaseController
 {
     public function __construct(
-        private EmpleadoRepository $empleadoRepo,
         private EmpleadoService $empleadoService,
     ) {}
 
-    public function agregarEmpleado(Request $request, Response $res): Response
+    public function agregarEmpleado(Request $request, Response $response): Response
     {
-        $data = $request->getParsedBody();
-        $empleadoRequest = EmpleadoRequest::fromArray($data);
+        $empleadoRequest = $this->getJsonDtoOrFail($request, EmpleadoRequest::class);
         $empleado = $this->empleadoService->crearEmpleado($empleadoRequest);
-        return JsonApiResponseHelper::respondWithCreatedResource($res, 'empleados', $empleado, '/empleados/' . $empleado['id']);
+
+        return $this->created(
+            $response,
+            $empleado,
+            'Empleado creado correctamente'
+        );
     }
-    
-    public function listarEmpleados(Request $request, Response $res): Response
+
+    public function listarEmpleados(Request $request, Response $response): Response
     {
         $empleados = $this->empleadoService->obtenerEmpleados();
-        return JsonApiResponseHelper::respondWithCollection($res, 'empleados',$empleados);
+
+        return $this->ok(
+            $response,
+            $empleados,
+            'Empleados obtenidos correctamente'
+        );
+    }
+
+    public function suspenderEmpleado(Request $request, Response $response, array $args): Response
+    {
+        $empleadoId = (int) $this->getRouteId($args, 'id');
+        $empleado = $this->empleadoService->suspenderEmpleado($empleadoId);
+
+        return $this->ok(
+            $response,
+            $empleado,
+            'Empleado suspendido correctamente'
+        );
+    }
+
+    public function reactivarEmpleado(Request $request, Response $response, array $args): Response
+    {
+        $empleadoId = (int) $this->getRouteId($args, 'id');
+        $empleado = $this->empleadoService->reactivarEmpleado($empleadoId);
+
+        return $this->ok(
+            $response,
+            $empleado,
+            'Empleado reactivado correctamente'
+        );
+    }
+
+    public function borrarEmpleado(Request $request, Response $response, array $args): Response
+    {
+        $empleadoId = (int) $this->getRouteId($args, 'id');
+        $empleado = $this->empleadoService->borrarEmpleado($empleadoId);
+
+        return $this->ok(
+            $response,
+            $empleado,
+            'Empleado dado de baja correctamente'
+        );
     }
 }

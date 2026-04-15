@@ -1,9 +1,12 @@
 <?php
+
 namespace App\Exceptions;
+
+use App\Domain\Error\ErrorCode;
 
 class NotFoundException extends HttpBaseException
 {
-    public function __construct(string $recurso = "Recurso") {
-        parent::__construct("$recurso no encontrado", 404, "RESOURCE_NOT_FOUND");
-    }
+    protected int $statusCode = 404;
+    protected string $status = ErrorCode::RESOURCE_NOT_FOUND;
+    protected string $defaultMessage = 'Recurso no encontrado.';
 }

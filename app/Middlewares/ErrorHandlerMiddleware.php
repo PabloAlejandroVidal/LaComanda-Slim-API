@@ -1,38 +1,87 @@
 <?php
+
 namespace App\Middlewares;
-use App\Exceptions\HttpException;
-use App\Http\ResponseHelper;
-use App\Interfaces\TokenVerifierInterface;
-use App\Repositories\PermisoRepository;
+
+use App\Exceptions\HttpBaseException;
+use App\Http\ApiResponseResponder;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use Psr\Http\Server\MiddlewareInterface as MiddlewareInterface;
+use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
-use Respect\Validation\Exceptions\NestedValidationException;
-use Slim\Psr7\Response as SlimResponse;
+use RuntimeException;
+use Slim\Exception\HttpMethodNotAllowedException;
+use Slim\Exception\HttpNotFoundException;
 
 class ErrorHandlerMiddleware implements MiddlewareInterface
 {
-
-    public function __construct(private ResponseFactoryInterface $responseFactory) {}
-
+    public function __construct(
+        private ResponseFactoryInterface $responseFactory
+    ) {}
 
     public function process(Request $request, RequestHandler $handler): Response
     {
         try {
             return $handler->handle($request);
 
-        }
-        catch (\Throwable $e) {
-            if ($e instanceof HttpException) {
-                return ResponseHelper::respond($this->responseFactory->createResponse(), $e->getStatusCode(), $e->getMessage());
-            }
-            return ResponseHelper::respond($this->responseFactory->createResponse(), 500, 'Error interno del servidor' , "SERVER_ERROR");
+        } catch (HttpBaseException $e) {
+            return ApiResponseResponder::error(
+                $this->responseFactory->createResponse(),
+                $e->getStatusCode(),
+                $e->getStatus(),
+                $e->getMessage(),
+                $e->getErrors()
+            );
+
+        } catch (HttpMethodNotAllowedException $e) {
+            error_log((string) $e);
+            $response = ApiResponseResponder::error(
+                $this->responseFactory->createResponse(),
+                405,
+                'METHOD_NOT_ALLOWED',
+                'Método no permitido'
+            );
+
+            return $response;
+
+        } catch (HttpNotFoundException $e) {
+            error_log((string) $e);
+            
+            return ApiResponseResponder::error(
+                $this->responseFactory->createResponse(),
+                404,
+                'NOT_FOUND',
+                'Recurso no encontrado'
+            );
+ 
+        } catch (\PDOException $e) {
+            error_log((string) $e);
+
+            return ApiResponseResponder::error(
+                $this->responseFactory->createResponse(),
+                500,
+                'DATABASE_ERROR',
+                'Ocurrió un error interno de base de datos'
+            );
+
+        } catch (RuntimeException $e) {
+            error_log((string) $e);
+
+            return ApiResponseResponder::error(
+            $this->responseFactory->createResponse(),
+                500,
+                'SERVER_ERROR',
+                'El endpoint configurado no es resolvible',
+            );
+        } catch (\Throwable $e) {
+            error_log((string) $e);
+
+            return ApiResponseResponder::error(
+                $this->responseFactory->createResponse(),
+                500,
+                'SERVER_ERROR',
+                'Error interno del servidor'
+            );
         }
     }
 }
-
-
-
-?>

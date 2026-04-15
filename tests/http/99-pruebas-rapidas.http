@@ -1,0 +1,16 @@
+@base = http://localhost/Programacion3/trabajoPractico-Final
+@token_socio = PEGAR_TOKEN_SOCIO
+@token_mozo = PEGAR_TOKEN_MOZO
+@token_cocinero = PEGAR_TOKEN_COCINERO
+@token_bartender = PEGAR_TOKEN_BARTENDER
+@token_cervecero = PEGAR_TOKEN_CERVECERO
+
+### pruebas sueltas acá
+GET {{base}}/mesas
+
+###
+GET {{base}}/productos
+
+###
+GET {{base}}/pedidos
+Authorization: Bearer {{token_socio}}

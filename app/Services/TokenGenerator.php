@@ -1,23 +1,32 @@
 <?php
 namespace App\Services;
 
+use App\Entities\TokenPayload;
 use App\Interfaces\TokenGeneratorInterface;
 use Firebase\JWT\JWT;
 
 class TokenGenerator implements TokenGeneratorInterface
 {
-    private $secretKey;
+    public function __construct(
+        private string $secretKey,
+        private int $expiration
+    ) {}
 
-    public function __construct(string $secretKey)
+    public function generateToken(TokenPayload $payload): string
     {
-        $this->secretKey = $secretKey;
-    }
+        $now = time();
 
-    public function generateToken(array | object $payload): string
-    {
-        $token = JWT::encode($payload, $this->secretKey, "HS256");
-        return $token;
+        $jwtPayload = [
+            'iat' => $now,
+            'exp' => $now + $this->expiration,
+            'data' => [
+                'id' => $payload->id,
+                'nombre' => $payload->nombre,
+                'email' => $payload->email,
+                'rol' => $payload->rol,
+            ]
+        ];
+
+        return JWT::encode($jwtPayload, $this->secretKey, 'HS256');
     }
 }
-
-?>

@@ -1,24 +1,38 @@
 <?php
+declare(strict_types=1);
+
 namespace App\DTO\Request;
-use ValidatableRequest;
-use Respect\Validation\{
-    Validator as v,
-    Exceptions\NestedValidationException
-};
-class MesaRequest implements ValidatableRequest {
+
+use Respect\Validation\Validator as v;
+use Respect\Validation\Validatable;
+
+final class MesaRequest extends AbstractRequestDTO
+{
     public function __construct(
         public string $id,
     ) {}
-        public static function fromArray(array $data): self
+
+    protected static function rules(): Validatable
     {
-        self::validate($data);
-        return new self(strtoupper($data['id']));
+        return v::key(
+            'id',
+            v::stringType()
+                ->regex('/^[A-Z0-9]{5}$/')
+                ->setTemplate('El ID debe tener exactamente 5 caracteres alfanuméricos')
+        )->setTemplate('Campo {{name}} requerido');
     }
 
-    public static function validate(array $data): void{
-        v::key('id', v::length(5, 5)->setTemplate('El ID debe ser de exactamente 5 caracteres'))
-        ->setTemplate('Campo {{name}} requerido')
-        ->assert($data);
-    } 
+    protected static function normalize(array $data): array
+    {
+        if (is_string($data['id'] ?? null)) {
+            $data['id'] = strtoupper(trim($data['id']));
+        }
+
+        return $data;
+    }
+
+    protected static function map(array $data): static
+    {
+        return new static($data['id']);
+    }
 }
-?>

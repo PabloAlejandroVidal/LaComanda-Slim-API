@@ -1,0 +1,159 @@
+@base = http://localhost/Programacion3/trabajoPractico-Final
+
+@token_socio = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxMTIwNDEsImV4cCI6MTc3NjExNTY0MSwiZGF0YSI6eyJpZCI6NSwibm9tYnJlIjoiU29jaW8xIiwiZW1haWwiOiJzb2NpbzFAZ21haWwuY29tIiwicm9sIjoic29jaW8ifX0.nObzASfpPHix-XBsahs8xjEycXf-tctScN5gSYbGEy4
+
+@token_mozo = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxMDg2NTYsImV4cCI6MTc3NjExMjI1NiwiZGF0YSI6eyJpZCI6NCwibm9tYnJlIjoiTW96bzEiLCJlbWFpbCI6Im1vem8xQGdtYWlsLmNvbSIsInJvbCI6Im1vem8ifX0.mNyA-7f7Gi6EPu-uZr_5BYeW-ARrGzynS94-1i1fCU4
+
+@token_cocinero = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxMTE5NjYsImV4cCI6MTc3NjExNTU2NiwiZGF0YSI6eyJpZCI6Mywibm9tYnJlIjoiQ29jaW5lcm8xIiwiZW1haWwiOiJjb2NpbmVybzFAZ21haWwuY29tIiwicm9sIjoiY29jaW5lcm8ifX0.U0XBNgu0nXe_3kTbehnKTvHCzTu2c6XcJQlQzaUgqzA
+
+@token_bartender = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYwNjM5NjQsImV4cCI6MTc3NjA2NzU2NCwiZGF0YSI6eyJpZCI6MSwibm9tYnJlIjoiQmFydGVuZGVyMSIsImVtYWlsIjoiYmFydGVuZGVyMUBnbWFpbC5jb20iLCJyb2wiOiJiYXJ0ZW5kZXIifX0.ZKjjaWSbmMK4B-u-BPc2AjlA_GayxyWSejBjPvKDcnI
+
+@token_cervecero = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzU5NDY5NDAsImV4cCI6MTc3NTk1MDU0MCwiZGF0YSI6eyJpZCI6Miwibm9tYnJlIjoiQ2VydmVjZXJvMSIsImVtYWlsIjoiY2VydmVjZXJvMUBnbWFpbC5jb20iLCJyb2wiOiJjZXJ2ZWNlcm8ifX0.WoroePTrK7PGPtmlxTFTVmvz7CCKX8KMCbLzodAV0Fs
+### Sector activo para la prueba
+@tokenSector = {{token_cocinero}}
+@sectorEntradaId = 1
+@sectorCocinaId = 3
+@sectorCandybarId = 4
+
+### Producto usado en la demo
+@prodMalbecRose = 11
+@tartaDeChocolate = 20
+@heladoVainilla = 21
+
+### Datos variables del flujo
+@mesaLibre = T1238
+@mesaNuevaSocio = T1238
+@mesaNuevaMozo = T1235
+@pedidoId = E8ML9
+@tiempoEstimadoMinutos = 15
+
+
+### =========================================
+### FLUJO DEL PEDIDO
+### =========================================
+
+### LISTAR PEDIDOS
+GET {{base}}/pedidos
+Authorization: Bearer {{token_mozo}}
+
+### CREAR PEDIDO
+POST {{base}}/pedidos
+Authorization: Bearer {{token_mozo}}
+Content-Type: application/json
+
+{
+  "nombre": "Pedro",
+  "mesa": "{{mesaLibre}}",
+  "detalles": [
+    {
+      "id": {{heladoVainilla}},
+      "cantidad": 2
+    }
+  ]
+}
+
+### INICIAR PREPARACIÓN (ASIGNACION)
+PATCH {{base}}/pedidos/{{pedidoId}}/iniciar-preparacion
+Authorization: Bearer {{tokenSector}}
+Content-Type: application/json
+
+{
+  "sectorId": {{sectorCandybarId}},
+  "tiempoEstimadoMinutos": {{tiempoEstimadoMinutos}}
+}
+
+### TERMINAR PREPARACION (MARCAR LISTO)
+PATCH {{base}}/pedidos/{{pedidoId}}/marcar-listo
+Authorization: Bearer {{tokenSector}}
+Content-Type: application/json
+
+{
+  "sectorId": {{sectorCandybarId}}
+}
+
+### ENTREGAR PEDIDO COMPLETO
+PATCH {{base}}/pedidos/{{pedidoId}}/entregar
+Authorization: Bearer {{token_mozo}}
+
+### COBRAR PEDIDO (SIN PEDIDOS PENDIENTES)
+PATCH {{base}}/pedidos/{{pedidoId}}/cobrar
+Authorization: Bearer {{token_mozo}}
+
+### CERRAR PEDIDO (DESPUES DE COBRAR)
+PATCH {{base}}/pedidos/{{pedidoId}}/cerrar
+Authorization: Bearer {{token_socio}}
+
+### CANCELAR PEDIDO (ANTES DE ENTREGAR)
+PATCH {{base}}/pedidos/{{pedidoId}}/cancelar
+Authorization: Bearer {{token_socio}}
+Content-Type: application/json
+
+{
+  "motivoCancelacion": "El cliente se retiró"
+}
+
+### COMPLETAR ENCUESTA (DESPUES DE PAGAR)
+POST {{base}}/pedidos/{{pedidoId}}/encuesta
+Content-Type: application/json
+
+{
+  "puntajeMesa": 8,
+  "puntajeRestaurante": 9,
+  "puntajeMozo": 10,
+  "puntajeCocinero": 7,
+  "comentario": "Lo recomendaria"
+}
+
+### ==============================
+### PEDIDOS - LISTAR
+### ==============================
+GET {{base}}/pedidos
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### PEDIDOS - VER UNO
+### ==============================
+GET {{base}}/pedidos/{{pedidoId}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### PEDIDOS - VER DETALLES
+### ==============================
+GET {{base}}/pedidos/{{pedidoId}}/detalles
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### PENDIENTES DEL SECTOR - COCINERO
+### ==============================
+GET {{base}}/pedidos/detalles/pendientes
+Authorization: Bearer {{token_cocinero}}
+
+### ==============================
+### EN PREPARACIÓN DEL SECTOR - COCINERO
+### ==============================
+GET {{base}}/pedidos/detalles/en-preparacion
+Authorization: Bearer {{token_cocinero}}
+
+### ==============================
+### PENDIENTES DEL SECTOR - BARTENDER
+### ==============================
+GET {{base}}/pedidos/detalles/pendientes
+Authorization: Bearer {{token_bartender}}
+
+### ==============================
+### EN PREPARACIÓN DEL SECTOR - BARTENDER
+### ==============================
+GET {{base}}/pedidos/detalles/en-preparacion
+Authorization: Bearer {{token_bartender}}
+
+### ==============================
+### PENDIENTES DEL SECTOR - CERVECERO
+### ==============================
+GET {{base}}/pedidos/detalles/pendientes
+Authorization: Bearer {{token_cervecero}}
+
+### ==============================
+### EN PREPARACIÓN DEL SECTOR - CERVECERO
+### ==============================
+GET {{base}}/pedidos/detalles/en-preparacion
+Authorization: Bearer {{token_cervecero}}

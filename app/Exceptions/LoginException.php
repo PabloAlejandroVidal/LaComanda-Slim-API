@@ -1,9 +1,12 @@
 <?php
 namespace App\Exceptions;
 
+use App\Domain\Error\ErrorCode;
+
 class LoginException extends HttpBaseException
 {
-    public function __construct(string $mensaje = "No se pudo iniciar sesión") {
-        parent::__construct($mensaje, 401, "LOGIN_UNSUCCESSFUL");
-    }
+    protected int $statusCode = 401;
+    protected string $status = ErrorCode::LOGIN_UNSUCCESSFUL;
+    protected string $defaultMessage = 'Credenciales inválidas.';
+
 }

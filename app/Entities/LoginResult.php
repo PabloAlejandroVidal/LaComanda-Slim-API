@@ -1,5 +1,5 @@
 <?php
-namespace App\DTO;
+namespace App\Entities;
 
 class LoginResult {
     public function __construct(

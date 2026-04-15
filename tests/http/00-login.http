@@ -1,0 +1,56 @@
+@base = http://localhost/Programacion3/trabajoPractico-Final
+
+### ==============================
+### LOGIN - SOCIO
+### ==============================
+POST {{base}}/login
+Content-Type: application/json
+
+{
+  "email": "socio1@gmail.com",
+  "clave": "1234"
+}
+
+### ==============================
+### LOGIN - MOZO
+### ==============================
+POST {{base}}/login
+Content-Type: application/json
+
+{
+  "email": "mozo1@gmail.com",
+  "clave": "1234"
+}
+
+### ==============================
+### LOGIN - COCINERO
+### ==============================
+POST {{base}}/login
+Content-Type: application/json
+
+{
+  "email": "cocinero1@gmail.com",
+  "clave": "1234"
+}
+
+### ==============================
+### LOGIN - BARTENDER
+### ==============================
+POST {{base}}/login
+Content-Type: application/json
+
+{
+  "email": "bartender1@gmail.com",
+  "clave": "1234"
+}
+
+### ==============================
+### LOGIN - CERVECERO
+### ==============================
+POST {{base}}/login
+Content-Type: application/json
+
+{
+  "email": "cervecero1@gmail.com",
+  "clave": "1234"
+}

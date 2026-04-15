@@ -1,14 +1,11 @@
 <?php
 namespace App\Exceptions;
 
+use App\Domain\Error\ErrorCode;
+
 class ValidationException extends HttpBaseException
 {
-        public function __construct(array $errores = []) {
-        parent::__construct(
-            "Datos inválidos",
-            422,
-            "VALIDATION_ERROR",
-            $errores
-        );
-    }
+    protected int $statusCode = 422;
+    protected string $status = ErrorCode::VALIDATION_ERROR;
+    protected string $defaultMessage = 'Datos inválidos';
 }

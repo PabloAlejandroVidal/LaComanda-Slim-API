@@ -1,8 +1,10 @@
 <?php
 namespace App\Interfaces;
+
+use App\Entities\TokenPayload;
 interface TokenGeneratorInterface
 {
-    public function generateToken(array | object $token): string;
+    public function generateToken(TokenPayload $payload): string;
 }
 
 ?>

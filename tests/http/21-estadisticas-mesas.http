@@ -1,0 +1,59 @@
+@base_url = http://localhost/Programacion3/trabajoPractico-Final
+@token_socio = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxMzA2NjQsImV4cCI6MTc3NjEzNDI2NCwiZGF0YSI6eyJpZCI6NSwibm9tYnJlIjoiU29jaW8xIiwiZW1haWwiOiJzb2NpbzFAZ21haWwuY29tIiwicm9sIjoic29jaW8ifX0.xUiXeErnD6v8qN_dR13Ja9r1Oq48ev6tML5gA-Pjj0g
+
+@from = 2026-01-01 00:00:00
+@to = 2026-12-31 23:59:59
+
+### ==============================
+### MESA MÁS USADA
+### ==============================
+GET {{base_url}}/mesas/estadisticas/mas-usada?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### MESA MENOS USADA
+### ==============================
+GET {{base_url}}/mesas/estadisticas/menos-usada?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### MAYOR FACTURACIÓN
+### ==============================
+GET {{base_url}}/mesas/estadisticas/mayor-facturacion?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### MENOR FACTURACIÓN
+### ==============================
+GET {{base_url}}/mesas/estadisticas/menor-facturacion?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### MAYOR IMPORTE
+### ==============================
+GET {{base_url}}/mesas/estadisticas/mayor-importe?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### MENOR IMPORTE
+### ==============================
+GET {{base_url}}/mesas/estadisticas/menor-importe?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### FACTURACIÓN ENTRE FECHAS
+### ==============================
+GET {{base_url}}/mesas/estadisticas/facturacion?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### MEJORES COMENTARIOS
+### ==============================
+GET {{base_url}}/mesas/estadisticas/comentarios/mejores?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}
+
+### ==============================
+### PEORES COMENTARIOS
+### ==============================
+GET {{base_url}}/mesas/estadisticas/comentarios/peores?from={{from}}&to={{to}}
+Authorization: Bearer {{token_socio}}

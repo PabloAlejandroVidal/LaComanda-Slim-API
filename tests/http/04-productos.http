@@ -1,0 +1,45 @@
+@base = http://localhost/Programacion3/trabajoPractico-Final
+@token_socio = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxNzk3NjUsImV4cCI6MTc3NjE4MzM2NSwiZGF0YSI6eyJpZCI6NSwibm9tYnJlIjoiU29jaW8xIiwiZW1haWwiOiJzb2NpbzFAZ21haWwuY29tIiwicm9sIjoic29jaW8ifX0.loZ7Anv-_sz0MlcKvX2-AYmX66vIRo21NvC1zoz6vgs
+@token_mozo = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzU2MTA5OTMsImV4cCI6MTc3NTYxNDU5MywiZGF0YSI6eyJpZCI6NCwibm9tYnJlIjoiTW96bzEiLCJlbWFpbCI6Im1vem8xQGdtYWlsLmNvbSIsInJvbCI6Im1vem8ifX0.ZWXRo9HTJsVkjbWZMKbC0cXWZw4QZQ0iqkg8j6Wqjfw
+
+@sectorBartender = 1
+@sectorChoperas = 2
+@sectorCocina = 3
+@sectorCandy = 4
+
+### ==============================
+### PRODUCTOS - LISTAR (PUBLICO)
+### ==============================
+GET {{base}}/productos
+
+### ==============================
+### PRODUCTOS - ALTA
+### ==============================
+POST {{base}}/productos
+Authorization: Bearer {{token_socio}}
+Content-Type: application/json
+
+{
+  "nombre": "Empanadas",
+  "sector": "cocina",
+  "precio": 3500
+}
+
+### ==============================
+### PRODUCTOS - ALTA CON ROL INVÁLIDO
+### ==============================
+POST {{base}}/productos
+Authorization: Bearer {{token_mozo}}
+Content-Type: application/json
+
+{
+  "nombre": "Cerveza IPA",
+  "sector": "cerveceria",
+  "precio": 2800
+}
+
+### ==============================
+### PRODUCTOS - EXPORTAR CSV
+### ==============================
+GET {{base}}/productos/export/csv
+Authorization: Bearer {{token_socio}}

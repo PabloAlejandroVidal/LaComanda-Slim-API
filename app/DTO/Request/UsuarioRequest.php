@@ -1,38 +1,49 @@
 <?php
+declare(strict_types=1);
+
 namespace App\DTO\Request;
 
-use ValidatableRequest;
-use Respect\Validation\{
-    Validator as v,
-    Exceptions\NestedValidationException
-};
+use Respect\Validation\Validator as v;
+use Respect\Validation\Validatable;
 
-class UsuarioRequest implements ValidatableRequest{
+final class UsuarioRequest extends AbstractRequestDTO
+{
     public function __construct(
         public string $email,
         public string $clave,
     ) {}
 
-    public static function fromArray(array $data): self {
-                
-        self::validate($data);
-        
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            throw new \InvalidArgumentException('El campo email no es válido');
-        }
-
-        return new self(
-            $data['email'],
-            $data['clave'],
-        );
+    protected static function rules(): Validatable
+    {
+        return v::key(
+            'email',
+            v::stringType()
+                ->notEmpty()
+                ->email()
+                ->setTemplate('Debe ser un email válido')
+        )->key(
+            'clave',
+            v::stringType()
+                ->length(4, 24)
+                ->regex('/\S/')
+                ->setTemplate('La clave debe tener entre 4 y 24 caracteres válidos')
+        )->setTemplate('Campo {{name}} requerido');
     }
 
-    public static function validate($data): void {
-                $validador = v::key('email', v::email()->setTemplate('Debe ser un email válido'))
-            ->key('clave', v::length(4, 24)->setTemplate('Clave entre 4 y 24 caracteres'))
-            ->setTemplate('Campo {{name}} requerido');
-            $validador->assert($data);
-    } 
-}
+    protected static function normalize(array $data): array
+    {
+        if (is_string($data['email'] ?? null)) {
+            $data['email'] = trim($data['email']);
+        }
 
-?>
+        return $data;
+    }
+
+    protected static function map(array $data): static
+    {
+        return new static(
+            $data['email'],
+            $data['clave']
+        );
+    }
+}

@@ -2,35 +2,31 @@
 namespace App\Services;
 
 use App\Interfaces\TokenVerifierInterface;
-use Firebase\JWT\ExpiredException;
+use Firebase\JWT\BeforeValidException;
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use Firebase\JWT\ExpiredException;
 use Firebase\JWT\SignatureInvalidException;
-use League\Csv\Exception;
+use App\Exceptions\UnauthorizedException;
+use UnexpectedValueException;
 
 class TokenVerifier implements TokenVerifierInterface
 {
-    private $secretKey;
+    public function __construct(
+        private string $secretKey
+    ) {}
 
-    public function __construct(string $secretKey)
+    public function verifyToken(string $token): object
     {
-        $this->secretKey = $secretKey;
-    }
-
-    public function verifyToken(string $token)
-    {        
         try {
-            $decodedToken = JWT::decode($token, $this->secretKey, ['HS256']);
-            $expiracion = $decodedToken->exp ?? null;
-            if ($expiracion && time() > $expiracion) {
-                throw new ExpiredException('Sesión expirada');
-            }
-        } catch (SignatureInvalidException $e) {
-            throw new SignatureInvalidException('Token no válido');
-        } catch (\Throwable $e) {
-            throw new \RuntimeException("error al validar el token, mensaje: " . $e->getMessage());
+            return JWT::decode(
+                $token,
+                new Key($this->secretKey, 'HS256')
+            );
+        } catch (ExpiredException $e) {
+            throw new UnauthorizedException('Token expirado', previous: $e);
+        } catch (SignatureInvalidException | BeforeValidException | UnexpectedValueException $e) {
+            throw new UnauthorizedException('Token inválido', previous: $e);
         }
-        return $decodedToken;
     }
 }
-
-?>

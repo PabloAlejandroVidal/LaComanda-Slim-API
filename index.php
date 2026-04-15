@@ -1,26 +1,20 @@
 <?php
-require_once 'vendor/autoload.php';
 
-use Slim\Factory\AppFactory;
-use DI\Container;
+require_once __DIR__ . '/vendor/autoload.php';
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+use Dotenv\Dotenv;
+
+$dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-$container = new Container();
-AppFactory::setContainer($container);
+$container = require __DIR__ . '/app/bootstrap/container.php';
 
-$app = AppFactory::createFromContainer($container);
-$app->setBasePath('/Programacion3/trabajoPractico-Final/app');
+$appFactory = require __DIR__ . '/app/bootstrap/app.php';
+$app = $appFactory($container);
 
-$app->addRoutingMiddleware();
-$app->addErrorMiddleware(true, true, true);
+(require __DIR__ . '/app/bootstrap/middleware.php')($app);
+(require __DIR__ . '/app/bootstrap/routes.php')($app);
 
-require_once 'app/config/dependencies.php';
-require_once 'routes.php';
+date_default_timezone_set('America/Argentina/Buenos_Aires');
 
-$app->addBodyParsingMiddleware();
-// se movió addBodyParsingMiddleware antes de run (revisar que no rompa el flujo)
 $app->run();
-
-?>

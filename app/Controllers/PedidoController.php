@@ -1,287 +1,155 @@
 <?php
+
 namespace App\Controllers;
 
-use App\Repositories\{
-    DetallePedidoRepository,
-    PedidoRepository,
-    EmpleadoRepository,
-    MesaRepository,
-    EstadoDetalle
-};
-use App\Services\{
-    ComandaService,
-    PedidoService
-};
-use App\DTO\DetalleDTO;
-use App\Utils;
-use Psr\Http\Message\{
-    ResponseInterface as Response,
-    ServerRequestInterface as Request
-};
-use Respect\Validation\{
-    Validator as v,
-    Exceptions\NestedValidationException
-};
+use App\DTO\Request\CancelarPedidoRequest;
+use App\DTO\Request\IniciarPreparacionRequest;
+use App\DTO\Request\PedidoRequest;
+use App\DTO\Request\PedidoSectorRequest;
+use App\Services\PedidoFotoService;
+use App\Services\PedidoService;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
 
-class PedidoController extends Controller
+final class PedidoController extends BaseController
 {
     public function __construct(
         private PedidoService $pedidoService,
-        private MesaRepository $mesaRepo,
-        private EmpleadoRepository $empleadoRepo,
-        private PedidoRepository $pedidoRepo,
-        private DetallePedidoRepository $detalleRepo,
+        private PedidoFotoService $pedidoFotoService
     ) {}
 
-   public function crearPedido(Request $req, Response $res): Response
-{
-    try {
-        $data = json_decode($req->getBody()->getContents(), true) ?? [];
+    public function crearPedido(Request $request, Response $response): Response
+    {
+        $pedidoRequest = $this->getJsonDtoOrFail($request, PedidoRequest::class);
+        $token = $this->getTokenPayload($request);
 
-        v::key('nombre', v::alpha()->length(2, 40))
-          ->key('mesa', v::alnum()->length(5, 5))
-          ->key('detalles', v::arrayType()->each(
-                v::key('id', v::intVal())
-                 ->key('cantidad', v::intVal()->positive())
-          ))->assert($data);
+        $pedido = $this->pedidoService->crearPedido($pedidoRequest, $token);
 
-        $token = $req->getAttribute('decodedToken');
+        return $this->created(
+            $response,
+            $pedido,
+            'Pedido creado correctamente'
+        );
+    }
 
-        $id = $this->pedidoService->crearPedido(
-            mesaId: strtoupper($data['mesa']),
-            mozoEmail: $token->email,
-            nombreCliente: $data['nombre'],
-            detalles: $data['detalles']
+    public function iniciarPreparacion(Request $request, Response $response, array $args): Response
+    {
+        $id = $this->getRouteId($args);
+        $preparacionRequest = $this->getJsonDtoOrFail($request, IniciarPreparacionRequest::class);
+        $token = $this->getTokenPayload($request);
+
+        $this->pedidoService->iniciarPreparacion(
+            $id,
+            $token->id,
+            $preparacionRequest->sectorId,
+            $preparacionRequest->tiempoEstimadoMinutos
         );
 
-        return $this->respond($res, 201, 'Pedido tomado con éxito', ['id' => $id]);
-
-    } catch (\DomainException $e) {
-        return $this->respond($res, 422, $e->getMessage());
-    } catch (\Throwable $e) {
-        return $this->respond($res, 500, 'Error interno: ' . $e->getMessage());
+        return $this->ok(
+            $response,
+            [
+                'id' => $id,
+                'sector_id' => $preparacionRequest->sectorId,
+                'tiempo_estimado_minutos' => $preparacionRequest->tiempoEstimadoMinutos,
+                'accion' => 'en_preparacion',
+            ],
+            'Preparación iniciada correctamente'
+        );
     }
-}
 
-    
-    public function agregarDetalles(Request $req, Response $res): Response
+    public function marcarListo(Request $request, Response $response, array $args): Response
     {
-        try {
-            $pedidoId = $req->getAttribute('route')->getArgument('id');
-            $data = json_decode($req->getBody()->getContents(), true) ?? [];
+        $id = $this->getRouteId($args);
+        $token = $this->getTokenPayload($request);
+        $sectorRequest = $this->getJsonDtoOrFail($request, PedidoSectorRequest::class);
 
-            $this->validate($data, v::arrayType()->each(
-                v::key('id', v::intVal())
-                ->key('cantidad', v::intVal()->positive())
-            ));
+        $this->pedidoService->marcarListo(
+            $id,
+            $token->id,
+            $sectorRequest->sectorId
+        );
 
-            $this->detalleRepo->insertarDetalles($pedidoId, $data);
-
-            return $this->respond($res, 200, 'Detalles agregados correctamente');
-
-        } catch (\DomainException $e) {
-            return $this->respond($res, 422, $e->getMessage());
-        } catch (\Throwable $e) {
-            return $this->respond($res, 500, 'Error interno: ' . $e->getMessage());
-        }
+        return $this->ok(
+            $response,
+            [
+                'id' => $id,
+                'sector_id' => $sectorRequest->sectorId,
+                'accion' => 'listo',
+            ],
+            'Pedido marcado como listo correctamente'
+        );
     }
 
-
-    // mostrar detalles de pedidos por una mesa y pedido puntual, agrupados por sin asignar, asignados, por entregar y entregados
-public function verDetalles(Request $req, Response $res): Response
-{
-    try {
-        $pedidoId = $req->getAttribute('route')->getArgument('pedidoId');
-        $mesaId   = $req->getAttribute('route')->getArgument('mesaId');
-
-        // Validar existencia del pedido y su relación con la mesa
-        $pedido = $this->pedidoRepo->getPedidoById($pedidoId);
-
-        if (!$pedido || $pedido['mesa_id'] !== $mesaId) {
-            return $this->respond($res, 404, "No se encontró el pedido $pedidoId para la mesa $mesaId");
-        }
-        
-        // Obtener detalles del pedido
-        $detalles = $this->detalleRepo->getDetallesDelPedido($pedidoId);
-        
-        if (empty($detalles)) {
-            return $this->respond($res, 200, "El pedido $pedidoId no tiene productos cargados");
-        }
-        
-        // Agrupar por sector
-        $agrupados = [
-            'mesa_id' => $mesaId,
-            'pedido_id' => $pedidoId,
-            'productos_por_sector' => []
-        ];
-
-        foreach ($detalles as $item) {
-            $sector = $item['sector_nombre'];
-            $agrupados['productos_por_sector'][$sector][] = [
-                'producto' => $item['producto_nombre'],
-                'cantidad' => $item['cantidad']
-            ];
-        }
-        
-        return $this->respond($res, 200, "Productos del pedido $pedidoId agrupados por sector", $agrupados);
-        
-    } catch (\Throwable $e) {
-        return $this->respond($res, 500, $e->getMessage());
-    }
-}public function cerrarPedido(Request $req, Response $res): Response
-{
-    try {
-        $pedidoId = $req->getAttribute('route')->getArgument('pedidoId');
-        $mesaId   = $req->getAttribute('route')->getArgument('mesaId');
-
-        // Validar existencia del pedido y su relación con la mesa
-        $pedido = $this->pedidoRepo->getPedidoById($pedidoId);
-
-        if (!$pedido || $pedido['mesa_id'] !== $mesaId) {
-            return $this->respond($res, 404, "No se encontró el pedido $pedidoId para la mesa $mesaId");
-        }
-        $token = $req->getAttribute('decodedToken');
-        $empleado = $this->empleadoRepo->getEmpleadoByEmail($token->email);
-        if (!$empleado) return $this->respond($res, 404, 'Empleado no encontrado');
-
-        $this->pedidoService->cerrarComanda($pedidoId, $empleado['id']);
-        
-        return $this->respond($res, 200, "Pedido cerrado exitosamente");
-        
-    } catch (\Throwable $e) {
-        return $this->respond($res, 500, $e->getMessage());
-    }
-}
-
-
-
-    public function asignarPedido(Request $req, Response $res): Response
+    public function subirFoto(Request $request, Response $response, array $args): Response
     {
-        return $this->procesarAccionSector($req, $res, 'asignar');
+        $pedidoId = $this->getRouteId($args);
+        $token = $this->getTokenPayload($request);
+
+        $uploadedFiles = $request->getUploadedFiles();
+        $foto = $uploadedFiles['foto'] ?? null;
+
+        $result = $this->pedidoFotoService->guardarFoto($pedidoId, $foto, $token);
+
+        return $this->created($response, $result, 'Foto del pedido cargada correctamente');
     }
 
-    public function prepararPedido(Request $req, Response $res): Response
+    public function entregar(Request $request, Response $response, array $args): Response
     {
-        return $this->procesarAccionSector($req, $res, 'preparar');
+        $id = $this->getRouteId($args);
+        $token = $this->getTokenPayload($request);
+
+        $this->pedidoService->entregar($id, $token->id);
+
+        return $this->ok(
+            $response,
+            [
+                'id' => $id,
+                'accion' => 'entregado',
+            ],
+            'Pedido entregado correctamente'
+        );
     }
 
-    public function entregarPedido(Request $req, Response $res): Response
+    public function cobrarMesa(Request $request, Response $response, array $args): Response
     {
-        return $this->procesarAccionSector($req, $res, 'entregar');
+        $id = $this->getRouteId($args);
+        $token = $this->getTokenPayload($request);
+
+        $resultado = $this->pedidoService->cobrarMesa($id, $token);
+
+        return $this->ok(
+            $response,
+            $resultado,
+            'Cobro registrado correctamente'
+        );
     }
 
-    private function procesarAccionSector(Request $req, Response $res, string $accion): Response
+    public function cerrar(Request $request, Response $response, array $args): Response
     {
-        try {
-            $data = json_decode($req->getBody()->getContents(), true) ?? [];
-            
-            $validator = v::key('pedido', v::alnum()->length(5, 5))
-                        ->key('mesa', v::alnum()->length(5, 5));
-            $validator->assert($data);
-            
-            $token = $req->getAttribute('decodedToken');
-            $empleadoId = $token->id;
+        $id = $this->getRouteId($args);
+        $token = $this->getTokenPayload($request);
 
-            $empleado = $this->empleadoRepo->getEmpleadoById($empleadoId);
-            if (!$empleado || !isset($empleado['sector_id'])) {
-                throw new \DomainException('Empleado o sector no válido');
-            }
-            $this->pedidoService->procesarPedido( $data['pedido'],$data['mesa'], $empleadoId, $empleado['sector_id'], $accion);
-            return $this->respond($res,200, ucfirst($accion) . ' registrada correctamente');
-        } 
-        catch (NestedValidationException $e) {
-            return $this->handleValidationErrors($res, $e);
-        }
-        catch (\DomainException $e) {
-            return $this->respond($res, 422, "Empleado o Sector no válido", null, $e->getMessage());
-        }
-        catch (\Throwable $e) {
-            return $this->respondWithJson($res, [
-                'status' => 'ERROR',
-                'message' => $e->getMessage()
-            ], 500);
-        }
+        $resultado = $this->pedidoService->cerrar($id, $token->id);
+
+        return $this->ok(
+            $response,
+            $resultado,
+            'Mesa cerrada correctamente'
+        );
     }
 
-    
-    //muestra pedidos pendientes agrupados
-    public function verPedidosPendientes(Request $request, Response $response): Response
+    public function cancelar(Request $request, Response $response, array $args): Response
     {
-        try {
-            $token = $request->getAttribute('decodedToken');
-            $empleadoId = $token->id;
+        $id = $this->getRouteId($args);
+        $cancelRequest = $this->getJsonDtoOrFail($request, CancelarPedidoRequest::class);
+        $token = $this->getTokenPayload($request);
 
-            $sectoresClaveId = $this->empleadoRepo->getSectoresByEmpleado($empleadoId);
-            if (empty($sectoresClaveId)) {
-                return $this->respondWithJson($response, [
-                    'status' => 'ERROR',
-                    'message' => 'No hay pedidos pendientes'
-                ], 403);
-            }
-            $mesas = [];
-            
-            foreach ($sectoresClaveId as $sector) {
-                $detalles = $this->detalleRepo->getPedidosDetalles($sector['id'], DetallePedidoRepository::SIN_ASIGNAR);
-                print_r($sector);
+        $resultado = $this->pedidoService->cancelar($id, $cancelRequest, $token);
 
-                foreach ($detalles as $detalle) {
-                    $mesaId   = $detalle['mesa_id'];
-                    $pedidoId = $detalle['pedido_id'];
-                    $sectorNombre = $detalle['sector_nombre'];
-
-                    // Clave única por mesa y pedido
-                    $key = $mesaId . '|' . $pedidoId;
-
-                    // Si no existe aún, inicializamos
-                    if (!isset($mesas[$key])) {
-                        $mesas[$key] = [
-                            'mesa_id' => $mesaId,
-                            'pedido_id' => $pedidoId,
-                            'productos_por_sector' => []
-                        ];
-                    }
-
-                    // Agrupar por sector
-                    $mesas[$key]['productos_por_sector'][$sectorNombre][] = [
-                        'producto' => $detalle['producto_nombre'],
-                        'cantidad' => $detalle['cantidad']
-                    ];
-                }
-            }
-
-            // Reindexado numerico del array
-            $mesas = array_values($mesas);
-
-            return $this->respondWithJson($response, [
-                'status' => 'OK',
-                'message' => 'Pedidos pendientes para preparar',
-                'data' => array_values($mesas),
-            ], 200);
-
-        } catch (\Throwable $e) {
-            return $this->respondWithJson($response, [
-                'status' => 'ERROR',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    //quien se asigno los podidos puede ver los pedidos que tiene en preparacion agrupados por mesa/pedido y subagrupados en sectores (normalmente vera solo un sector)
-    public function verPedidosPreparacion(Request $req, Response $res): Response
-    {
-        try {
-            $token = $this->getToken($req);
-            $empleado = $this->empleadoRepo->getEmpleadoById($token->id);
-
-            if (!$empleado || !isset($empleado['sector_id'])) {
-                return $this->respond($res, 400, 'Sector no asignado al empleado');
-            }
-            
-            $result = $this->pedidoService->prepararLote($empleado['sector_id']);
-            
-            return $this->respond($res, 200, 'Pedidos en preparación', $result);
-        } catch (\Throwable $e) {
-            return $this->respond($res, 500, $e->getMessage());
-        }
+        return $this->ok(
+            $response,
+            $resultado,
+            'Pedido cancelado correctamente'
+        );
     }
 }

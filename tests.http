@@ -1,0 +1,87 @@
+@base = http://localhost/Programacion3/trabajoPractico-Final
+@token = PEGAR_TOKEN_ACA
+@from = 2026-01-01
+@to = 2026-12-31
+
+### ==============================
+### 1️⃣ LOGIN
+### ==============================
+POST {{base}}/login
+Content-Type: application/json
+
+{
+  "email": "mozo1@gmail.com",
+  "clave": "12345"
+}
+
+### ==============================
+### 2️⃣ LISTAR MESAS (PUBLICO)
+### ==============================
+GET {{base}}/mesas
+
+
+### ==============================
+### 3️⃣ CREAR MESA (REQUIERE SOCIO O MOZO)
+### ==============================
+POST {{base}}/mesas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "T1234"
+}
+
+
+### ==============================
+### 4️⃣ MESA MAS USADA
+### ==============================
+GET {{base}}/mesas/estadisticas/mas-usada?from={{from}}&to={{to}}
+Authorization: Bearer {{token}}
+
+
+### ==============================
+### 5️⃣ MESA MENOS USADA
+### ==============================
+GET {{base}}/mesas/estadisticas/menos-usada?from={{from}}&to={{to}}
+Authorization: Bearer {{token}}
+
+
+### ==============================
+### 6️⃣ MESA MAYOR FACTURACION
+### ==============================
+GET {{base}}/mesas/estadisticas/mayor-facturacion?from={{from}}&to={{to}}
+Authorization: Bearer {{token}}
+
+
+### ==============================
+### 7️⃣ MESA MENOR FACTURACION
+### ==============================
+GET {{base}}/mesas/estadisticas/menor-facturacion?from={{from}}&to={{to}}
+Authorization: Bearer {{token}}
+
+
+### ==============================
+### 8️⃣ MEJORES COMENTARIOS
+### ==============================
+GET {{base}}/mesas/estadisticas/mejores-comentarios?from={{from}}&to={{to}}
+Authorization: Bearer {{token}}
+
+
+### ==============================
+### 9️⃣ PEORES COMENTARIOS
+### ==============================
+GET {{base}}/mesas/estadisticas/peores-comentarios?from={{from}}&to={{to}}
+Authorization: Bearer {{token}}
+
+
+### ==============================
+### 🔐 PRUEBA SIN TOKEN (DEBE DAR 401)
+### ==============================
+GET {{base}}/mesas/estadisticas/mas-usada?from={{from}}&to={{to}}
+
+
+### ==============================
+### 🔐 PRUEBA TOKEN INVALIDO (DEBE DAR 401)
+### ==============================
+GET {{base}}/mesas/estadisticas/mas-usada?from={{from}}&to={{to}}
+Authorization: Bearer 123

@@ -3,8 +3,6 @@ namespace App\Repositories;
 
 use App\Domain\Mesa\EstadoMesa;
 use PDO;
-use PDOException;
-use Exception;
 
 class MesaRepository
 {
@@ -12,53 +10,24 @@ class MesaRepository
         private PDO $pdo
     ) {}
 
-    /*-------------------------------------------------
-    | Obtener mesas (todas o una)
-    -------------------------------------------------*/
-    public function get(?string $id = null): array
-    {
-        try {
-            if ($id === null) {
-                $stmt = $this->pdo->query("SELECT * FROM mesas");
-            } else {
-                $stmt = $this->pdo->prepare("SELECT * FROM mesas WHERE id = :id");
-                $stmt->execute([':id' => $id]);
-            }
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            throw new Exception("Error al consultar mesas: " . $e->getMessage());
-        }
-    }
-
-    /*-------------------------------------------------
-    | Alta de mesa
-    -------------------------------------------------*/
     public function add(string $id): string
     {
-        try {
-            $stmt = $this->pdo->prepare(
-                "INSERT INTO mesas (id, estado) 
-                 VALUES (
-                    :id,
-                    (SELECT id FROM mesa_estados WHERE nombre = :nombre)
-                 )"
-            );
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO mesas (id, estado) 
+            VALUES (
+                :id,
+                (SELECT id FROM mesa_estados WHERE nombre = :nombre)
+            )"
+        );
 
-            $stmt->execute([
-                ':id'     => $id,
-                ':nombre' => EstadoMesa::CERRADA->value
-            ]);
+        $stmt->execute([
+            ':id'     => $id,
+            ':nombre' => EstadoMesa::CERRADA->value
+        ]);
 
-            return $id;
-
-        } catch (PDOException $e) {
-            throw new Exception("No se pudo agregar la mesa $id: " . $e->getMessage());
-        }
+        return $id;
     }
 
-    /*-------------------------------------------------
-    | ¿Existe la mesa?
-    -------------------------------------------------*/
     public function exists(string $id): bool
     {
         $stmt = $this->pdo->prepare("SELECT 1 FROM mesas WHERE id = :id");
@@ -66,33 +35,22 @@ class MesaRepository
         return (bool) $stmt->fetchColumn();
     }
 
-    /*-------------------------------------------------
-    | Cambiar estado
-    -------------------------------------------------*/
     public function setEstado(string $mesaId, EstadoMesa $estado): void
     {
-        try {
-            $stmt = $this->pdo->prepare(
-                "UPDATE mesas 
-                 SET estado = (
-                    SELECT id FROM mesa_estados WHERE nombre = :nombre
-                 )
-                 WHERE id = :id"
-            );
+        $stmt = $this->pdo->prepare(
+            "UPDATE mesas 
+                SET estado = (
+                SELECT id FROM mesa_estados WHERE nombre = :nombre
+                )
+                WHERE id = :id"
+        );
 
-            $stmt->execute([
-                ':nombre' => $estado->value,
-                ':id'     => $mesaId
-            ]);
-
-        } catch (PDOException $e) {
-            throw new Exception("No se pudo actualizar el estado de la mesa $mesaId: " . $e->getMessage());
-        }
+        $stmt->execute([
+            ':nombre' => $estado->value,
+            ':id'     => $mesaId
+        ]);
     }
 
-    /*-------------------------------------------------
-    | Obtener mesa individual
-    -------------------------------------------------*/
     public function getMesa(string $mesaId): ?array
     {
         $stmt = $this->pdo->prepare("
@@ -113,15 +71,16 @@ class MesaRepository
         ];
     }
 
-    /*-------------------------------------------------
-    | Obtener todas con estado convertido a Enum
-    -------------------------------------------------*/
     public function getMesas(): array
     {
         $stmt = $this->pdo->prepare("
-            SELECT m.id, me.nombre as estado
+            SELECT
+                m.id,
+                me.nombre AS estado,
+                me.descripcion AS estado_descripcion
             FROM mesas m
             JOIN mesa_estados me ON me.id = m.estado
+            ORDER BY m.id ASC
         ");
 
         $stmt->execute();
@@ -134,19 +93,18 @@ class MesaRepository
         return $rows;
     }
 
-    /*-------------------------------------------------
-    | ESTADÍSTICAS
-    -------------------------------------------------*/
-
     public function getMesaMasUsada(string $from, string $to): ?array
     {
         $sql = "
-            SELECT m.id, COUNT(p.id) as total_usos
+            SELECT 
+                m.id,
+                COUNT(p.id) AS total_usos
             FROM mesas m
-            JOIN pedidos p ON p.mesa_id = m.id
+            INNER JOIN pedidos p 
+                ON p.mesa_id = m.id
             WHERE p.hora_inicio BETWEEN :from AND :to
             GROUP BY m.id
-            ORDER BY total_usos DESC
+            ORDER BY total_usos DESC, m.id ASC
             LIMIT 1
         ";
 
@@ -159,12 +117,15 @@ class MesaRepository
     public function getMesaMenosUsada(string $from, string $to): ?array
     {
         $sql = "
-            SELECT m.id, COUNT(p.id) as total_usos
+            SELECT 
+                m.id,
+                COUNT(p.id) AS total_usos
             FROM mesas m
-            JOIN pedidos p ON p.mesa_id = m.id
+            INNER JOIN pedidos p 
+                ON p.mesa_id = m.id
             WHERE p.hora_inicio BETWEEN :from AND :to
             GROUP BY m.id
-            ORDER BY total_usos ASC
+            ORDER BY total_usos ASC, m.id ASC
             LIMIT 1
         ";
 
@@ -174,14 +135,14 @@ class MesaRepository
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function getMesaQueMasFacturo(string $from, string $to): ?array
+    public function getMesaMayorFacturacion(string $from, string $to): ?array
     {
         $sql = "
-            SELECT m.id, SUM(p.importe) as total_facturado
+            SELECT m.id,
+                SUM(p.importe) as total_facturado
             FROM mesas m
             JOIN pedidos p ON p.mesa_id = m.id
-            WHERE p.hora_pago IS NOT NULL
-              AND p.hora_inicio BETWEEN :from AND :to
+            WHERE p.hora_pago BETWEEN :from AND :to
             GROUP BY m.id
             ORDER BY total_facturado DESC
             LIMIT 1
@@ -193,14 +154,14 @@ class MesaRepository
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function getMesaQueMenosFacturo(string $from, string $to): ?array
+    public function getMesaMenorFacturacion(string $from, string $to): ?array
     {
         $sql = "
-            SELECT m.id, SUM(p.importe) as total_facturado
+            SELECT m.id,
+                SUM(p.importe) as total_facturado
             FROM mesas m
             JOIN pedidos p ON p.mesa_id = m.id
-            WHERE p.hora_pago IS NOT NULL
-              AND p.hora_inicio BETWEEN :from AND :to
+            WHERE p.hora_pago BETWEEN :from AND :to
             GROUP BY m.id
             ORDER BY total_facturado ASC
             LIMIT 1
@@ -217,8 +178,7 @@ class MesaRepository
         $sql = "
             SELECT mesa_id, importe
             FROM pedidos
-            WHERE hora_pago IS NOT NULL
-              AND hora_inicio BETWEEN :from AND :to
+            WHERE hora_pago BETWEEN :from AND :to
             ORDER BY importe DESC
             LIMIT 1
         ";
@@ -234,8 +194,7 @@ class MesaRepository
         $sql = "
             SELECT mesa_id, importe
             FROM pedidos
-            WHERE hora_pago IS NOT NULL
-              AND hora_inicio BETWEEN :from AND :to
+            WHERE hora_pago BETWEEN :from AND :to
             ORDER BY importe ASC
             LIMIT 1
         ";
@@ -246,18 +205,76 @@ class MesaRepository
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function getFacturacionTotal(string $from, string $to): float
+    public function getFacturacionEntre(string $from, string $to): array
     {
         $sql = "
-            SELECT SUM(importe) as total
+            SELECT 
+                COUNT(*) as total_pedidos,
+                COALESCE(SUM(importe), 0) as total_facturado,
+                COALESCE(AVG(importe), 0) as promedio
             FROM pedidos
-            WHERE hora_pago IS NOT NULL
-              AND hora_inicio BETWEEN :from AND :to
+            WHERE hora_pago BETWEEN :from AND :to
         ";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':from' => $from, ':to' => $to]);
 
-        return (float) $stmt->fetchColumn();
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [
+            'total_pedidos' => 0,
+            'total_facturado' => 0,
+            'promedio' => 0,
+        ];
+    }
+
+    public function getMejoresComentarios(string $from, string $to): array
+    {
+        $sql = "
+            SELECT 
+                p.mesa_id,
+                e.comentario,
+                (
+                    (COALESCE(e.puntaje_mesa,0) +
+                    COALESCE(e.puntaje_restaurante,0) +
+                    COALESCE(e.puntaje_mozo,0) +
+                    COALESCE(e.puntaje_cocinero,0)) / 4
+                ) as promedio
+            FROM encuestas e
+            JOIN pedidos p ON p.id = e.pedido_id
+            WHERE p.hora_pago BETWEEN :from AND :to
+            AND e.comentario IS NOT NULL
+            ORDER BY promedio DESC
+            LIMIT 5
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':from' => $from, ':to' => $to]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getPeoresComentarios(string $from, string $to): array
+    {
+        $sql = "
+            SELECT 
+                p.mesa_id,
+                e.comentario,
+                (
+                    (COALESCE(e.puntaje_mesa,0) +
+                    COALESCE(e.puntaje_restaurante,0) +
+                    COALESCE(e.puntaje_mozo,0) +
+                    COALESCE(e.puntaje_cocinero,0)) / 4
+                ) as promedio
+            FROM encuestas e
+            JOIN pedidos p ON p.id = e.pedido_id
+            WHERE p.hora_pago BETWEEN :from AND :to
+            AND e.comentario IS NOT NULL
+            ORDER BY promedio ASC
+            LIMIT 5
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':from' => $from, ':to' => $to]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

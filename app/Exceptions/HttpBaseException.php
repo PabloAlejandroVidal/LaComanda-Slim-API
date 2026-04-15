@@ -1,25 +1,41 @@
 <?php
+
 namespace App\Exceptions;
 
-abstract class HttpBaseException extends \Exception implements HttpException
+use App\Domain\Error\ErrorCode;
+
+abstract class HttpBaseException extends \RuntimeException
 {
+    protected int $statusCode = 500;
+    protected string $status = ErrorCode::SERVER_ERROR;
+    protected string $defaultMessage = 'Error interno del servidor';
+    protected array $errors = [];
+
     public function __construct(
-        string $message = "",
-        protected int $statusCode = 500,
-        protected string $status = "INTERNAL_ERROR",
-        protected array $errors = [] 
+        ?string $message = null,
+        ?\Throwable $previous = null
     ) {
-        parent::__construct($message);
+        parent::__construct($message ?? $this->defaultMessage, 0, $previous);
     }
 
-    public function getStatusCode(): int {
+    public function getStatusCode(): int
+    {
         return $this->statusCode;
     }
 
-    public function getStatus(): string {
+    public function getStatus(): string
+    {
         return $this->status;
     }
-    public function getErrors(): array {
+
+    public function getErrors(): array
+    {
         return $this->errors;
+    }
+
+    public function withErrors(array $errors): static
+    {
+        $this->errors = $errors;
+        return $this;
     }
 }
