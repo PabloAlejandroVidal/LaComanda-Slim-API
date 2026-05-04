@@ -1,6 +1,17 @@
 La Comanda — Programación 3
 Trabajo Práctico Final
 Arquitectura de la API (PHP + Slim)
+
+## Resumen
+
+Esta arquitectura fue definida para modelar el flujo de comandas con múltiples sectores y roles, asegurando consistencia en los estados del sistema.
+
+- Arquitectura en capas (Controller → Service → Repository)
+- Lógica centralizada en services
+- DTOs para contratos claros
+- Estados derivados en lugar de persistidos
+- Manejo de errores centralizado
+
 1. Objetivo
 
 Este documento define las reglas estructurales de la API para garantizar:
