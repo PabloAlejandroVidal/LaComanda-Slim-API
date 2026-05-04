@@ -1,7 +1,6 @@
 @base = http://localhost/Programacion3/trabajoPractico-Final
-@token_socio = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxMjE5OTQsImV4cCI6MTc3NjEyNTU5NCwiZGF0YSI6eyJpZCI6NSwibm9tYnJlIjoiU29jaW8xIiwiZW1haWwiOiJzb2NpbzFAZ21haWwuY29tIiwicm9sIjoic29jaW8ifX0.fqJpP38BLCYD1YzXaSEbHyVjNmzO8gP6bTnELyLUWuU
-
-@token_mozo = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzU2MTA5OTMsImV4cCI6MTc3NTYxNDU5MywiZGF0YSI6eyJpZCI6NCwibm9tYnJlIjoiTW96bzEiLCJlbWFpbCI6Im1vem8xQGdtYWlsLmNvbSIsInJvbCI6Im1vem8ifX0.ZWXRo9HTJsVkjbWZMKbC0cXWZw4QZQ0iqkg8j6Wqjfw
+@token_socio = YOUR_TOKEN_HERE
+@token_mozo = YOUR_TOKEN_HERE
 @from = 2026-01-01
 @to = 2026-12-31
 

@@ -1,9 +1,9 @@
 @base = http://localhost/Programacion3/trabajoPractico-Final
-@token_socio = PEGAR_TOKEN_SOCIO
-@token_mozo = PEGAR_TOKEN_MOZO
-@token_cocinero = PEGAR_TOKEN_COCINERO
-@token_bartender = PEGAR_TOKEN_BARTENDER
-@token_cervecero = PEGAR_TOKEN_CERVECERO
+@token_socio = YOUR_TOKEN_HERE
+@token_mozo = YOUR_TOKEN_HERE
+@token_cocinero = YOUR_TOKEN_HERE
+@token_bartender = YOUR_TOKEN_HERE
+@token_cervecero = YOUR_TOKEN_HERE
 
 ### pruebas sueltas acá
 GET {{base}}/mesas

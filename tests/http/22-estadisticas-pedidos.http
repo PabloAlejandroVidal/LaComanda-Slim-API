@@ -1,6 +1,6 @@
 @base_url = http://localhost/Programacion3/trabajoPractico-Final
 
-@token_socio = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzYxMTIwNDEsImV4cCI6MTc3NjExNTY0MSwiZGF0YSI6eyJpZCI6NSwibm9tYnJlIjoiU29jaW8xIiwiZW1haWwiOiJzb2NpbzFAZ21haWwuY29tIiwicm9sIjoic29jaW8ifX0.nObzASfpPHix-XBsahs8xjEycXf-tctScN5gSYbGEy4
+@token_socio = YOUR_TOKEN_HERE
 
 @from = 2026-01-01 00:00:00
 
