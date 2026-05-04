@@ -242,6 +242,7 @@ return function ($app, $container) {
             EmpleadoType::SOCIO,
             EmpleadoType::CERVECERO,
             EmpleadoType::BARTENDER,
+            EmpleadoType::MOZO,
             EmpleadoType::COCINERO
         ]));
 
