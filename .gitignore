@@ -1,6 +1,11 @@
 /vendor/
-/.env
 /node_modules/
 /storage/
+
+.env
+
 .DS_Store
 .idea/
+
+public/uploads/
+public/uploads/*
